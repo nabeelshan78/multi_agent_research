@@ -7,9 +7,9 @@ trivial to swap providers, adjust retry policies, or add observability
 hooks in a single place.
 
 Dual-Model Strategy:
-    - **fast**:      ``grok-3-mini-latest`` — low-latency, cost-efficient.
+    - **fast**:      ``llama-3.1-8b-instant`` — low-latency, cost-efficient.
                      Used by Clarity and Validator agents (binary classification).
-    - **reasoning**: ``grok-3-latest`` — high-capability, deeper reasoning.
+    - **reasoning**: ``llama-3.3-70b-versatile`` — high-capability, deeper reasoning.
                      Used by Research and Synthesis agents.
 """
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 from typing import Literal
 
-from langchain_xai import ChatXAI
+from langchain_groq import ChatGroq
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 from utils.errors import LLMAPIError, SearchToolError
@@ -26,8 +26,8 @@ from utils.errors import LLMAPIError, SearchToolError
 
 # ── Model registry ───────────────────────────────────────────────────────────
 _MODEL_REGISTRY: dict[str, str] = {
-    "fast": "grok-3-mini-latest",
-    "reasoning": "grok-3-latest",
+    "fast": "llama-3.1-8b-instant",
+    "reasoning": "llama-3.3-70b-versatile",
 }
 
 # Type alias for the two supported model tiers.
@@ -61,18 +61,18 @@ def get_llm(
     temperature: float = 0.0,
     max_retries: int = 3,
     timeout: float | None = 60.0,
-) -> ChatXAI:
-    """Create and return a configured ``ChatXAI`` instance.
+) -> ChatGroq:
+    """Create and return a configured ``ChatGroq`` instance.
 
-    This factory selects the appropriate Grok model based on the
-    requested *tier* and wires up retry / timeout settings suitable
-    for production workloads.
+    This factory selects the appropriate Groq-hosted model based on
+    the requested *tier* and wires up retry / timeout settings
+    suitable for production workloads.
 
     Args:
         tier: Model tier to use.
 
-            - ``"fast"`` → ``grok-3-mini-latest`` (Clarity & Validator).
-            - ``"reasoning"`` → ``grok-3-latest`` (Research & Synthesis).
+            - ``"fast"`` → ``llama-3.1-8b-instant`` (Clarity & Validator).
+            - ``"reasoning"`` → ``llama-3.3-70b-versatile`` (Research & Synthesis).
 
         temperature: Sampling temperature.  Defaults to ``0.0`` for
             deterministic output (important for routing decisions).
@@ -82,10 +82,10 @@ def get_llm(
             timeout entirely.
 
     Returns:
-        A fully configured ``ChatXAI`` chat model instance.
+        A fully configured ``ChatGroq`` chat model instance.
 
     Raises:
-        LLMAPIError: If the ``XAI_API_KEY`` environment variable is
+        LLMAPIError: If the ``GROQ_API_KEY`` environment variable is
             missing or empty.
 
     Example::
@@ -93,20 +93,21 @@ def get_llm(
         llm_fast = get_llm("fast")
         llm_reasoning = get_llm("reasoning", temperature=0.3)
     """
-    _validate_env_var("XAI_API_KEY")
+    api_key = _validate_env_var("GROQ_API_KEY")
 
     model_name = _MODEL_REGISTRY[tier]
 
     try:
-        return ChatXAI(
+        return ChatGroq(
             model=model_name,
             temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
+            api_key=api_key,
         )
     except Exception as exc:
         raise LLMAPIError(
-            f"Failed to instantiate ChatXAI with model '{model_name}': {exc}",
+            f"Failed to instantiate ChatGroq with model '{model_name}': {exc}",
             cause=exc,
         ) from exc
 
@@ -114,7 +115,7 @@ def get_llm(
 def get_search_tool(max_results: int = 5) -> TavilySearchResults:
     """Create and return a configured Tavily search tool.
 
-    The tool is designed to be bound to a ``ChatXAI`` instance via
+    The tool is designed to be bound to a ``ChatGroq`` instance via
     ``.bind_tools()`` for the Research Agent's tool-calling workflow.
 
     Args:

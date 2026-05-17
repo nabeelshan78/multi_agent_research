@@ -33,7 +33,7 @@ class Settings:
     after initialisation.
 
     Attributes:
-        xai_api_key: API key for the xAI / Grok LLM service.
+        groq_api_key: API key for the Groq Cloud LLM service.
         tavily_api_key: API key for the Tavily search service.
         fast_model: Model identifier for low-latency tasks
             (Clarity Agent, Validator Agent).
@@ -54,16 +54,16 @@ class Settings:
     """
 
     # ── API Keys ─────────────────────────────────────────────────────────
-    xai_api_key: str = field(
-        default_factory=lambda: os.getenv("XAI_API_KEY", "")
+    groq_api_key: str = field(
+        default_factory=lambda: os.getenv("GROQ_API_KEY", "")
     )
     tavily_api_key: str = field(
         default_factory=lambda: os.getenv("TAVILY_API_KEY", "")
     )
 
     # ── Model Selection ──────────────────────────────────────────────────
-    fast_model: str = "grok-3-mini-latest"
-    reasoning_model: str = "grok-3-latest"
+    fast_model: str = "llama-3.1-8b-instant"
+    reasoning_model: str = "llama-3.3-70b-versatile"
 
     # ── LLM Parameters ──────────────────────────────────────────────────
     default_temperature: float = 0.0

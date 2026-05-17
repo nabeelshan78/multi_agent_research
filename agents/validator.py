@@ -1,7 +1,7 @@
 """
 Validator Agent — Research quality critic and gatekeeper node.
 
-Uses the **fast** model tier (``grok-3-mini-latest``) to evaluate
+Uses the **fast** model tier (``llama-3.1-8b-instant``) to evaluate
 whether the accumulated research sufficiently answers the user's query.
 Acts purely as a critic — does NOT perform any research itself.
 
@@ -78,7 +78,7 @@ def validator_agent(state: AgentState) -> dict[str, Any]:
         incremented research_attempts, and status messages.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
     """
     logger.info("Validator Agent: Evaluating research quality.")
 

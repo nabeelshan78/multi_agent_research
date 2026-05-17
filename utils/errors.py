@@ -8,7 +8,7 @@ code can catch and handle errors precisely rather than relying on broad
 Exception Tree::
 
     ResearchAssistantError (base)
-    ├── LLMAPIError          — Grok / xAI API failures
+    ├── LLMAPIError          — Groq Cloud API failures
     ├── SearchToolError      — Tavily search failures
     └── StateValidationError — Invalid state transitions or missing fields
 """
@@ -36,7 +36,7 @@ class ResearchAssistantError(Exception):
 
 
 class LLMAPIError(ResearchAssistantError):
-    """Raised when a call to the Grok / xAI LLM API fails.
+    """Raised when a call to the Groq Cloud LLM API fails.
 
     This covers network timeouts, rate-limit (429) responses, malformed
     responses, and authentication failures.  The ``cause`` attribute
@@ -48,7 +48,7 @@ class LLMAPIError(ResearchAssistantError):
             response = llm.invoke(messages)
         except Exception as exc:
             raise LLMAPIError(
-                "Grok API call failed after retries",
+                "Groq API call failed after retries",
                 cause=exc,
             ) from exc
     """

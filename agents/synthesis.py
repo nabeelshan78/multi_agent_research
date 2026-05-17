@@ -1,7 +1,7 @@
 """
 Synthesis Agent — Final report generation node.
 
-Uses the **reasoning** model tier (``grok-3-latest``) to consume all
+Uses the **reasoning** model tier (``llama-3.3-70b-versatile``) to consume all
 accumulated research data and conversation history, then produce a
 structured, highly readable business research report.
 
@@ -79,7 +79,7 @@ def synthesis_agent(state: AgentState) -> dict[str, Any]:
         Dict with final_report string and appended messages.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
     """
     logger.info("Synthesis Agent: Generating final report.")
 

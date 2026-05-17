@@ -1,7 +1,7 @@
 """
 Clarity Agent — Query comprehension and disambiguation node.
 
-Uses the **fast** model tier (``grok-3-mini-latest``) to perform a
+Uses the **fast** model tier (``llama-3.1-8b-instant``) to perform a
 binary classification on the user's query:
 
     - **"clear"**: The query is specific enough to proceed with research.
@@ -15,7 +15,7 @@ into the conversation history and the clarity check re-runs.
 
 Cost Rationale:
     This is a classification task — no deep reasoning required.
-    Using ``grok-3-mini-latest`` keeps latency and cost minimal.
+    Using ``llama-3.1-8b-instant`` on Groq Cloud keeps latency and cost minimal.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ def clarity_agent(state: AgentState) -> dict[str, Any] | Command:
     This is a LangGraph node function that:
 
     1. Builds a prompt from the conversation history + current query.
-    2. Calls the **fast** Grok model with structured output to get a
+    2. Calls the **fast** Groq model with structured output to get a
        binary classification.
     3. If ``"clear"`` → returns updated state fields to proceed.
     4. If ``"needs_clarification"`` → calls ``interrupt()`` to pause
@@ -126,7 +126,7 @@ def clarity_agent(state: AgentState) -> dict[str, Any] | Command:
         interrupt resumption).
 
     Raises:
-        LLMAPIError: If the Grok API call fails after all retries.
+        LLMAPIError: If the Groq API call fails after all retries.
     """
     logger.info("Clarity Agent: Evaluating query clarity.")
 

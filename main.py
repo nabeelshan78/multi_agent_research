@@ -62,7 +62,7 @@ def _print_banner() -> None:
     """Print the application banner on startup."""
     print(f"\n{_CYAN}{_BOLD}{_SEPARATOR}")
     print("   🔬  Multi-Agent Business Research Assistant")
-    print(f"   Powered by Grok (xAI) + Tavily + LangGraph")
+    print(f"   Powered by Groq Cloud + Tavily + LangGraph")
     print(f"{_SEPARATOR}{_RESET}")
     print(
         f"{_DIM}   Type your research query and press Enter."

@@ -1,7 +1,7 @@
 """
 Research Agent — Tool-calling node with Tavily search integration.
 
-Uses the **reasoning** model tier (``grok-3-latest``) to:
+Uses the **reasoning** model tier (``llama-3.3-70b-versatile``) to:
 
 1. Analyse the user's query and conversation history.
 2. Generate targeted search queries.
@@ -18,7 +18,7 @@ The agent runs a manual tool-calling loop (rather than
 
 Cost Rationale:
     This agent needs deep reasoning to formulate good search queries
-    and synthesise findings, so it uses ``grok-3-latest``.
+    and synthesise findings, so it uses ``llama-3.3-70b-versatile`` on Groq Cloud.
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ def research_agent(state: AgentState) -> dict[str, Any]:
         ``confidence_score``, and appended ``messages``.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
         SearchToolError: If Tavily search execution fails.
     """
     logger.info("Research Agent: Starting research cycle.")

@@ -105,7 +105,7 @@ class Settings:
     after initialisation.
 
     Attributes:
-        xai_api_key: API key for the xAI / Grok LLM service.
+        groq_api_key: API key for the Groq Cloud LLM service.
         tavily_api_key: API key for the Tavily search service.
         fast_model: Model identifier for low-latency tasks
             (Clarity Agent, Validator Agent).
@@ -126,16 +126,16 @@ class Settings:
     """
 
     # ── API Keys ─────────────────────────────────────────────────────────
-    xai_api_key: str = field(
-        default_factory=lambda: os.getenv("XAI_API_KEY", "")
+    groq_api_key: str = field(
+        default_factory=lambda: os.getenv("GROQ_API_KEY", "")
     )
     tavily_api_key: str = field(
         default_factory=lambda: os.getenv("TAVILY_API_KEY", "")
     )
 
     # ── Model Selection ──────────────────────────────────────────────────
-    fast_model: str = "grok-3-mini-latest"
-    reasoning_model: str = "grok-3-latest"
+    fast_model: str = "llama-3.1-8b-instant"
+    reasoning_model: str = "llama-3.3-70b-versatile"
 
     # ── LLM Parameters ──────────────────────────────────────────────────
     default_temperature: float = 0.0
@@ -447,7 +447,7 @@ def _print_banner() -> None:
     """Print the application banner on startup."""
     print(f"\n{_CYAN}{_BOLD}{_SEPARATOR}")
     print("   🔬  Multi-Agent Business Research Assistant")
-    print(f"   Powered by Grok (xAI) + Tavily + LangGraph")
+    print(f"   Powered by Groq Cloud + Tavily + LangGraph")
     print(f"{_SEPARATOR}{_RESET}")
     print(
         f"{_DIM}   Type your research query and press Enter."
@@ -710,19 +710,13 @@ if __name__ == "__main__":
 File: .\requirements.txt
 ================================================================================
 
-# =============================================================================
-# Multi-Agent Business Research Assistant — Dependencies
-# =============================================================================
-# Install with:  pip install -r requirements.txt
-# =============================================================================
-
 # ── Core Orchestration ───────────────────────────────────────────────────────
 langgraph>=0.4.0
 langchain>=0.3.0
 langchain-core>=0.3.0
 
-# ── LLM Provider (xAI / Grok) ───────────────────────────────────────────────
-langchain-xai>=0.2.0
+# ── LLM Provider (Groq Cloud) ───────────────────────────────────────────────
+langchain-groq>=0.3.0
 
 # ── Search Tool ──────────────────────────────────────────────────────────────
 langchain-community>=0.3.0
@@ -864,7 +858,7 @@ File: .\agents\clarity.py
 """
 Clarity Agent — Query comprehension and disambiguation node.
 
-Uses the **fast** model tier (``grok-3-mini-latest``) to perform a
+Uses the **fast** model tier (``llama-3.1-8b-instant``) to perform a
 binary classification on the user's query:
 
     - **"clear"**: The query is specific enough to proceed with research.
@@ -878,7 +872,7 @@ into the conversation history and the clarity check re-runs.
 
 Cost Rationale:
     This is a classification task — no deep reasoning required.
-    Using ``grok-3-mini-latest`` keeps latency and cost minimal.
+    Using ``llama-3.1-8b-instant`` on Groq Cloud keeps latency and cost minimal.
 """
 
 from __future__ import annotations
@@ -973,7 +967,7 @@ def clarity_agent(state: AgentState) -> dict[str, Any] | Command:
     This is a LangGraph node function that:
 
     1. Builds a prompt from the conversation history + current query.
-    2. Calls the **fast** Grok model with structured output to get a
+    2. Calls the **fast** Groq model with structured output to get a
        binary classification.
     3. If ``"clear"`` → returns updated state fields to proceed.
     4. If ``"needs_clarification"`` → calls ``interrupt()`` to pause
@@ -989,7 +983,7 @@ def clarity_agent(state: AgentState) -> dict[str, Any] | Command:
         interrupt resumption).
 
     Raises:
-        LLMAPIError: If the Grok API call fails after all retries.
+        LLMAPIError: If the Groq API call fails after all retries.
     """
     logger.info("Clarity Agent: Evaluating query clarity.")
 
@@ -1094,7 +1088,7 @@ File: .\agents\research.py
 """
 Research Agent — Tool-calling node with Tavily search integration.
 
-Uses the **reasoning** model tier (``grok-3-latest``) to:
+Uses the **reasoning** model tier (``llama-3.3-70b-versatile``) to:
 
 1. Analyse the user's query and conversation history.
 2. Generate targeted search queries.
@@ -1111,7 +1105,7 @@ The agent runs a manual tool-calling loop (rather than
 
 Cost Rationale:
     This agent needs deep reasoning to formulate good search queries
-    and synthesise findings, so it uses ``grok-3-latest``.
+    and synthesise findings, so it uses ``llama-3.3-70b-versatile`` on Groq Cloud.
 """
 
 from __future__ import annotations
@@ -1248,7 +1242,7 @@ def research_agent(state: AgentState) -> dict[str, Any]:
         ``confidence_score``, and appended ``messages``.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
         SearchToolError: If Tavily search execution fails.
     """
     logger.info("Research Agent: Starting research cycle.")
@@ -1495,7 +1489,7 @@ File: .\agents\synthesis.py
 """
 Synthesis Agent — Final report generation node.
 
-Uses the **reasoning** model tier (``grok-3-latest``) to consume all
+Uses the **reasoning** model tier (``llama-3.3-70b-versatile``) to consume all
 accumulated research data and conversation history, then produce a
 structured, highly readable business research report.
 
@@ -1573,7 +1567,7 @@ def synthesis_agent(state: AgentState) -> dict[str, Any]:
         Dict with final_report string and appended messages.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
     """
     logger.info("Synthesis Agent: Generating final report.")
 
@@ -1654,7 +1648,7 @@ File: .\agents\validator.py
 """
 Validator Agent — Research quality critic and gatekeeper node.
 
-Uses the **fast** model tier (``grok-3-mini-latest``) to evaluate
+Uses the **fast** model tier (``llama-3.1-8b-instant``) to evaluate
 whether the accumulated research sufficiently answers the user's query.
 Acts purely as a critic — does NOT perform any research itself.
 
@@ -1731,7 +1725,7 @@ def validator_agent(state: AgentState) -> dict[str, Any]:
         incremented research_attempts, and status messages.
 
     Raises:
-        LLMAPIError: If the Grok API call fails after retries.
+        LLMAPIError: If the Groq API call fails after retries.
     """
     logger.info("Validator Agent: Evaluating research quality.")
 
@@ -1861,7 +1855,7 @@ code can catch and handle errors precisely rather than relying on broad
 Exception Tree::
 
     ResearchAssistantError (base)
-    ├── LLMAPIError          — Grok / xAI API failures
+    ├── LLMAPIError          — Groq Cloud API failures
     ├── SearchToolError      — Tavily search failures
     └── StateValidationError — Invalid state transitions or missing fields
 """
@@ -1889,7 +1883,7 @@ class ResearchAssistantError(Exception):
 
 
 class LLMAPIError(ResearchAssistantError):
-    """Raised when a call to the Grok / xAI LLM API fails.
+    """Raised when a call to the Groq Cloud LLM API fails.
 
     This covers network timeouts, rate-limit (429) responses, malformed
     responses, and authentication failures.  The ``cause`` attribute
@@ -1901,7 +1895,7 @@ class LLMAPIError(ResearchAssistantError):
             response = llm.invoke(messages)
         except Exception as exc:
             raise LLMAPIError(
-                "Grok API call failed after retries",
+                "Groq API call failed after retries",
                 cause=exc,
             ) from exc
     """
@@ -1955,9 +1949,9 @@ trivial to swap providers, adjust retry policies, or add observability
 hooks in a single place.
 
 Dual-Model Strategy:
-    - **fast**:      ``grok-3-mini-latest`` — low-latency, cost-efficient.
+    - **fast**:      ``llama-3.1-8b-instant`` — low-latency, cost-efficient.
                      Used by Clarity and Validator agents (binary classification).
-    - **reasoning**: ``grok-3-latest`` — high-capability, deeper reasoning.
+    - **reasoning**: ``llama-3.3-70b-versatile`` — high-capability, deeper reasoning.
                      Used by Research and Synthesis agents.
 """
 
@@ -1966,7 +1960,7 @@ from __future__ import annotations
 import os
 from typing import Literal
 
-from langchain_xai import ChatXAI
+from langchain_groq import ChatGroq
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 from utils.errors import LLMAPIError, SearchToolError
@@ -1974,8 +1968,8 @@ from utils.errors import LLMAPIError, SearchToolError
 
 # ── Model registry ───────────────────────────────────────────────────────────
 _MODEL_REGISTRY: dict[str, str] = {
-    "fast": "grok-3-mini-latest",
-    "reasoning": "grok-3-latest",
+    "fast": "llama-3.1-8b-instant",
+    "reasoning": "llama-3.3-70b-versatile",
 }
 
 # Type alias for the two supported model tiers.
@@ -2009,18 +2003,18 @@ def get_llm(
     temperature: float = 0.0,
     max_retries: int = 3,
     timeout: float | None = 60.0,
-) -> ChatXAI:
-    """Create and return a configured ``ChatXAI`` instance.
+) -> ChatGroq:
+    """Create and return a configured ``ChatGroq`` instance.
 
-    This factory selects the appropriate Grok model based on the
-    requested *tier* and wires up retry / timeout settings suitable
-    for production workloads.
+    This factory selects the appropriate Groq-hosted model based on
+    the requested *tier* and wires up retry / timeout settings
+    suitable for production workloads.
 
     Args:
         tier: Model tier to use.
 
-            - ``"fast"`` → ``grok-3-mini-latest`` (Clarity & Validator).
-            - ``"reasoning"`` → ``grok-3-latest`` (Research & Synthesis).
+            - ``"fast"`` → ``llama-3.1-8b-instant`` (Clarity & Validator).
+            - ``"reasoning"`` → ``llama-3.3-70b-versatile`` (Research & Synthesis).
 
         temperature: Sampling temperature.  Defaults to ``0.0`` for
             deterministic output (important for routing decisions).
@@ -2030,10 +2024,10 @@ def get_llm(
             timeout entirely.
 
     Returns:
-        A fully configured ``ChatXAI`` chat model instance.
+        A fully configured ``ChatGroq`` chat model instance.
 
     Raises:
-        LLMAPIError: If the ``XAI_API_KEY`` environment variable is
+        LLMAPIError: If the ``GROQ_API_KEY`` environment variable is
             missing or empty.
 
     Example::
@@ -2041,20 +2035,21 @@ def get_llm(
         llm_fast = get_llm("fast")
         llm_reasoning = get_llm("reasoning", temperature=0.3)
     """
-    _validate_env_var("XAI_API_KEY")
+    api_key = _validate_env_var("GROQ_API_KEY")
 
     model_name = _MODEL_REGISTRY[tier]
 
     try:
-        return ChatXAI(
+        return ChatGroq(
             model=model_name,
             temperature=temperature,
             max_retries=max_retries,
             timeout=timeout,
+            api_key=api_key,
         )
     except Exception as exc:
         raise LLMAPIError(
-            f"Failed to instantiate ChatXAI with model '{model_name}': {exc}",
+            f"Failed to instantiate ChatGroq with model '{model_name}': {exc}",
             cause=exc,
         ) from exc
 
@@ -2062,7 +2057,7 @@ def get_llm(
 def get_search_tool(max_results: int = 5) -> TavilySearchResults:
     """Create and return a configured Tavily search tool.
 
-    The tool is designed to be bound to a ``ChatXAI`` instance via
+    The tool is designed to be bound to a ``ChatGroq`` instance via
     ``.bind_tools()`` for the Research Agent's tool-calling workflow.
 
     Args:
