@@ -109,7 +109,7 @@ multi_agent_system/
 
 ---
 
-## ⚡ Quickstart
+## Quickstart
 
 ### 1. Clone & Install
 
@@ -150,7 +150,7 @@ python main.py
 
 ```
 ════════════════════════════════════════════════════════════════════════
-   🔬  Multi-Agent Business Research Assistant
+   Multi-Agent Business Research Assistant
    Powered by Groq Cloud + Tavily + LangGraph
 ════════════════════════════════════════════════════════════════════════
    Session ID: a3f8c21b...
@@ -162,16 +162,16 @@ Research Query ▶ What is Nvidia's competitive position in the AI chip market?
 ────────────────────────────────────────────────────────────────────────
 
 [Clarity Agent]
-✅ Query assessed as clear (attempt 1/3). Proceeding with research...
+Query assessed as clear (attempt 1/3). Proceeding with research...
 
 [Research Agent]
-🔍 Research cycle 1 complete. Found 18 new sources (18 total). Confidence: 8.2/10.
+Research cycle 1 complete. Found 18 new sources (18 total). Confidence: 8.2/10.
 
 ════════════════════════════════════════════════════════════════════════
-   📊  FINAL RESEARCH REPORT
+   FINAL RESEARCH REPORT
 ════════════════════════════════════════════════════════════════════════
 
-### 📋 Executive Summary
+### Executive Summary
 Nvidia dominates the AI accelerator market with an estimated 70-95% market
 share in data center GPUs...
 ```
@@ -186,7 +186,7 @@ share in data center GPUs...
 
 ---
 
-## 🔁 How It Works
+## How It Works
 
 ### The Execution Flow
 
@@ -223,7 +223,7 @@ The graph is checkpointed at every interrupt. `main.py` captures the interrupt p
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All tuning knobs live in `config.py`. No agent code needs to change.
 
@@ -248,7 +248,7 @@ class Settings:
 
 ---
 
-## 🧩 State Schema
+## State Schema
 
 ```python
 class AgentState(TypedDict):
@@ -268,7 +268,7 @@ The `add_messages` reducer on the `messages` field means every agent **appends**
 
 ---
 
-## 🛣️ Execution Paths
+## Execution Paths
 
 | Scenario | Flow | LLM Calls |
 |---|---|---|
@@ -281,7 +281,7 @@ The `add_messages` reducer on the `messages` field means every agent **appends**
 
 ---
 
-## 🔧 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -302,8 +302,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-Built with 🧠 by [Nabeel Shan](https://github.com/nabeelshan78)
-
-*If this project helped you, consider giving it a ⭐*
+Built by [Nabeel Shan](https://github.com/nabeelshan78)
 
 </div>
