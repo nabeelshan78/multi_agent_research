@@ -6,3 +6,6 @@ __pycache__/
 env/
 venv/
 .vscode/
+submission/
+entire_codebase.txt
+codebase.py

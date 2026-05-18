@@ -30,7 +30,7 @@ from graph import build_graph
 
 # ── Logging configuration ────────────────────────────────────────────────────
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.CRITICAL,
     format="%(asctime)s | %(name)-25s | %(levelname)-7s | %(message)s",
     datefmt="%H:%M:%S",
     handlers=[logging.StreamHandler(sys.stderr)],
@@ -149,12 +149,20 @@ def _run_graph_with_interrupt_handling(
 ) -> str | None:
     """Stream the graph, handle interrupts, and return the final report.
 
-    This function implements the interrupt handling loop:
+    Implements a reliable interrupt detection strategy:
 
     1. Stream graph events, printing agent updates as they arrive.
-    2. If the graph pauses at an interrupt, extract the clarification
-       question, prompt the user, and resume with ``Command(resume=...)``.
-    3. Repeat until the graph completes or the user exits.
+    2. When an ``__interrupt__`` event key appears **during the stream**,
+       capture its payload immediately into ``captured_interrupt``.
+       This works on every round of the clarity agent's clarification
+       loop — not just the first — because the payload is read from the
+       live stream rather than from ``graph_state.tasks`` after the fact.
+    3. After the stream exhausts, use ``captured_interrupt`` (primary) or
+       fall back to ``graph_state.tasks`` inspection (secondary safety net)
+       to resolve the interrupt payload.
+    4. Display the clarification prompt, collect user input, and resume
+       with ``Command(resume=clarification)``.
+    5. Repeat until the graph completes or the user exits.
 
     Args:
         graph: The compiled LangGraph state graph.
@@ -169,81 +177,124 @@ def _run_graph_with_interrupt_handling(
     while True:
         # ── Stream events ────────────────────────────────────────────
         final_report = None
+        # Reset on every pass — populated inline from the __interrupt__ key.
+        # This is the primary detection mechanism and works for all rounds
+        # of the clarity agent's iterative clarification loop.
+        captured_interrupt: dict | None = None
 
         try:
             for event in graph.stream(input_data, config, stream_mode="updates"):
-                # event is {node_name: state_update_dict}
+                # Each event is {node_name: state_update_value}
                 for node_name, node_data in event.items():
+
                     if node_name == "__interrupt__":
-                        # Interrupt events are handled below
+                        # In stream_mode="updates", node_data for __interrupt__
+                        # is a tuple/list of Interrupt objects.  Pull the dict
+                        # payload from the first element's .value attribute.
+                        try:
+                            if node_data:
+                                first = node_data[0]
+                                payload = (
+                                    first.value
+                                    if hasattr(first, "value")
+                                    else first
+                                )
+                                if isinstance(payload, dict):
+                                    captured_interrupt = payload
+                                    logger.debug(
+                                        "Interrupt captured from stream: %s",
+                                        captured_interrupt,
+                                    )
+                        except (IndexError, TypeError, AttributeError) as exc:
+                            logger.warning(
+                                "Could not parse __interrupt__ payload: %s", exc
+                            )
+                        # Never pass interrupt events to _print_agent_event.
                         continue
+
                     _print_agent_event(node_name, node_data)
 
-                    # Capture the final report if synthesis produced it
+                    # Capture the final report when synthesis completes.
                     if node_name == "synthesis_agent":
                         report = node_data.get("final_report", "")
                         if report:
                             final_report = report
+
         except Exception as exc:
             _print_error(f"Graph execution error: {exc}")
             logger.exception("Graph execution failed.")
             return None
 
-        # ── Check for interrupts ─────────────────────────────────────
+        # ── Resolve interrupt payload ─────────────────────────────────
+        # Primary: payload captured live from the stream above.
+        interrupt_data: dict | None = captured_interrupt
+
+        # Always fetch graph_state — needed both for the fallback and for
+        # the completion check (graph_state.next == () means finished).
         graph_state = graph.get_state(config)
 
-        if graph_state.next:
-            # Graph is paused — check for interrupt payload
-            # The interrupt info is stored in the tasks
-            interrupt_data = None
+        # Fallback: inspect tasks only when the live stream missed the payload.
+        # This covers edge cases (e.g. future LangGraph version changes).
+        if interrupt_data is None and graph_state.next:
             if hasattr(graph_state, "tasks") and graph_state.tasks:
                 for task in graph_state.tasks:
                     if hasattr(task, "interrupts") and task.interrupts:
                         for intr in task.interrupts:
-                            interrupt_data = intr.value
-                            break
+                            val = intr.value if hasattr(intr, "value") else intr
+                            if isinstance(val, dict):
+                                interrupt_data = val
+                                break
                     if interrupt_data:
                         break
 
-            if interrupt_data and isinstance(interrupt_data, dict):
-                question = interrupt_data.get(
-                    "question", "Could you please clarify your query?"
+            if interrupt_data:
+                logger.debug(
+                    "Interrupt payload resolved via graph_state.tasks fallback."
                 )
-                reasoning = interrupt_data.get("reasoning", "")
 
-                print(f"\n{_YELLOW}{_BOLD}{_THIN_SEP}")
-                print(f"   🤔  CLARIFICATION NEEDED")
-                print(f"{_THIN_SEP}{_RESET}")
-                if reasoning:
-                    print(f"{_DIM}   Reason: {reasoning}{_RESET}")
-                print(f"\n{_YELLOW}   {question}{_RESET}\n")
+        # ── Handle interrupt or completion ────────────────────────────
+        if interrupt_data and isinstance(interrupt_data, dict):
+            question = interrupt_data.get(
+                "question", "Could you please clarify your query?"
+            )
+            reasoning = interrupt_data.get("reasoning", "")
 
-                try:
-                    clarification = input(
-                        f"{_BOLD}Your clarification ▶ {_RESET}"
-                    ).strip()
-                except (KeyboardInterrupt, EOFError):
-                    print(f"\n{_DIM}Session ended.{_RESET}")
-                    return None
+            print(f"\n{_YELLOW}{_BOLD}{_THIN_SEP}")
+            print(f"   CLARIFICATION NEEDED")
+            print(f"{_THIN_SEP}{_RESET}")
+            if reasoning:
+                print(f"{_DIM}   Reason: {reasoning}{_RESET}")
+            print(f"\n{_YELLOW}   {question}{_RESET}\n")
 
-                if not clarification:
-                    print(f"{_DIM}No input provided. Using original query.{_RESET}")
-                    clarification = "Please proceed with the original query."
+            try:
+                clarification = input(
+                    f"{_BOLD}Your clarification ▶ {_RESET}"
+                ).strip()
+            except (KeyboardInterrupt, EOFError):
+                print(f"\n{_DIM}Session ended.{_RESET}")
+                return None
 
-                # Resume the graph with the user's clarification
-                input_data = Command(resume=clarification)
-                continue  # Loop back to stream the resumed graph
-            else:
-                # Graph is paused at a node but no interrupt data
-                # This shouldn't happen in normal flow, but handle it
-                logger.warning(
-                    "Graph paused at %s without interrupt data.",
-                    graph_state.next,
-                )
-                input_data = None
-                continue
+            if not clarification:
+                print(f"{_DIM}No input provided. Using original query.{_RESET}")
+                clarification = "Please proceed with the original query."
+
+            # Resume the graph — this string becomes the return value of
+            # interrupt() inside the clarity agent's loop.
+            input_data = Command(resume=clarification)
+            continue  # Loop back to stream the resumed graph
+
+        elif graph_state.next:
+            # Graph is paused but we found no interrupt payload anywhere —
+            # unexpected state; nudge the graph forward rather than hanging.
+            logger.warning(
+                "Graph paused at %s but no interrupt payload found. Nudging forward.",
+                graph_state.next,
+            )
+            input_data = Command(resume="Please proceed.")
+            continue
+
         else:
-            # Graph has completed
+            # Graph has completed normally.
             if final_report:
                 _print_final_report(final_report)
             return final_report
