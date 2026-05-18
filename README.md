@@ -229,8 +229,8 @@ All tuning knobs live in `config.py`. No agent code needs to change.
 ```python
 @dataclass(frozen=True, slots=True)
 class Settings:
-    fast_model: str = "llama-3.1-8b-instant"       # Clarity + Validator
-    reasoning_model: str = "llama-3.3-70b-versatile" # Research + Synthesis
+    fast_model: str = "llama-3.1-8b-instant"       # Clarity and Validator
+    reasoning_model: str = "llama-3.3-70b-versatile" # Research and Synthesis
     
     confidence_threshold: float = 6.0   # Skip validator if score >= this
     max_research_attempts: int = 3       # Max validator → research cycles
